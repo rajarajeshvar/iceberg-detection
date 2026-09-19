@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # ==============================================================================
 # Git Ignore Rules: Sentinel-1 SAR Iceberg Detection & Segmentation Pipeline
 # ==============================================================================
@@ -6,24 +5,10 @@
 # --- Python Environments & Bytecode ---
 __pycache__/
 **/__pycache__/
-=======
-# Node.js
-node_modules/
-dist/
-dist-ssr/
-*.local
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Python & Environments
-__pycache__/
->>>>>>> b46dd06e49c8c458c83a2915a7ec9c805f15caca
 *.py[cod]
 *$py.class
 *.so
 .Python
-<<<<<<< HEAD
 build/
 develop-eggs/
 dist/
@@ -160,26 +145,3 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .npm/
-=======
-venv/
-env/
-ENV/
-.env
-.venv
-*.sqlite3
-*.db
-.pytest_cache/
-.coverage
-htmlcov/
-
-# Logs & temp
-*.log
-*.tmp
-
-# Operating System & IDE
-.DS_Store
-Thumbs.db
-.idea/
-.vscode/*
-!.vscode/extensions.json
->>>>>>> b46dd06e49c8c458c83a2915a7ec9c805f15caca

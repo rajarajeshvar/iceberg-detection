@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sentinel-1 SAR Iceberg Segmentation & Geospatial State Extraction</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Top Bar -->
+        <header class="top-nav">
+            <div class="nav-brand">
+                <span class="brand-tag">S1-SAR</span>
+                <span class="brand-title">Iceberg Detection & Geospatial State Extraction</span>
+            </div>
+            <div class="nav-metrics">
+                <div class="metric-item">
+                    <span class="metric-label">Test Dice:</span>
+                    <span class="metric-value" id="statDice">57.5%</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Test IoU:</span>
+                    <span class="metric-value" id="statIou">40.3%</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Precision:</span>
+                    <span class="metric-value" id="statPrec">60.9%</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Recall:</span>
+                    <span class="metric-value" id="statRec">54.5%</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Inference Latency:</span>
+                    <span class="metric-value" id="statLatency">32.4 ms</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Workspace -->
+        <div class="main-grid">
+            <!-- Left Controls & Scene Metadata -->
+            <aside class="sidebar">
+                <!-- Controls Card -->
+                <section class="panel">
+                    <h2 class="panel-heading">Inference Settings</h2>
+                    
+                    <div class="form-field">
+                        <label for="sampleSelect">Select Sentinel-1 Test Scene</label>
+                        <select id="sampleSelect" class="select-input">
+                            <option value="">Loading test scenes...</option>
+                        </select>
+                    </div>
+
+                    <div class="divider-text">or</div>
+
+                    <div class="form-field">
+                        <label for="fileUpload">Upload GeoTIFF (.tif)</label>
+                        <input type="file" id="fileUpload" accept=".tif,.tiff" class="file-input">
+                    </div>
+
+                    <div class="form-field">
+                        <div class="slider-header">
+                            <label for="confSlider">Probability Threshold</label>
+                            <span class="slider-value" id="confVal">0.50</span>
+                        </div>
+                        <input type="range" id="confSlider" min="0.10" max="0.90" step="0.05" value="0.50" class="range-input">
+                    </div>
+
+                    <button id="btnRunInference" class="action-btn">
+                        <span class="btn-text">Run Segmentation</span>
+                    </button>
+                </section>
+
+                <!-- Full Scene Metadata Panel -->
+                <section class="panel">
+                    <h2 class="panel-heading">Scene Geospatial & Temporal Metadata</h2>
+                    <div id="sceneMetadata" class="meta-list">
+                        <p class="empty-note">Select a scene and run segmentation to view acquisition timestamp, coordinate reference system, bounding box, and sensor telemetry.</p>
+                    </div>
+                </section>
+
+                <!-- Selected Iceberg Detail Inspector -->
+                <section class="panel" id="inspectorPanel">
+                    <h2 class="panel-heading">Selected Iceberg State Inspector</h2>
+                    <div id="icebergInspector" class="meta-list">
+                        <p class="empty-note">Click any row in the table below to inspect its full state object, precise coordinates, and physical dimensions.</p>
+                    </div>
+                </section>
+            </aside>
+
+            <!-- Center Visualizations & Catalog Output -->
+            <main class="content-area">
+                <!-- Viewer Panel -->
+                <section class="panel viewer-panel">
+                    <nav class="view-tabs">
+                        <button class="tab-button active" data-tab="tab-overlay">Segmentation Overlay</button>
+                        <button class="tab-button" data-tab="tab-compare">4-Way Comparison</button>
+                        <button class="tab-button" data-tab="tab-prob">Probability Map</button>
+                        <button class="tab-button" data-tab="tab-json">IcebergState JSON</button>
+                    </nav>
+
+                    <!-- Tab 1: Overlay -->
+                    <div class="tab-pane active" id="tab-overlay">
+                        <div class="canvas-box">
+                            <img id="imgOverlay" class="display-image" alt="Iceberg Detection Overlay" style="display: none;">
+                            <div id="imgPlaceholder" class="empty-display">
+                                <p class="empty-title">No Active Image</p>
+                                <p class="empty-sub">Choose a scene on the left and click "Run Segmentation" to view detections.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 2: 4-Way Comparison -->
+                    <div class="tab-pane" id="tab-compare">
+                        <div class="quad-grid">
+                            <div class="quad-item">
+                                <div class="quad-header">1. Sentinel-1 SAR (HH / HV)</div>
+                                <img id="imgCompareSar" class="quad-img" alt="SAR Input">
+                            </div>
+                            <div class="quad-item">
+                                <div class="quad-header">2. Ground Truth Mask</div>
+                                <img id="imgCompareGt" class="quad-img" alt="Ground Truth">
+                            </div>
+                            <div class="quad-item">
+                                <div class="quad-header">3. SegFormer-B0 Prediction</div>
+                                <img id="imgComparePred" class="quad-img" alt="SegFormer Output">
+                            </div>
+                            <div class="quad-item">
+                                <div class="quad-header">4. Iceberg Bounding Boxes</div>
+                                <img id="imgCompareOverlay" class="quad-img" alt="Bounding Boxes">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 3: Heatmap -->
+                    <div class="tab-pane" id="tab-prob">
+                        <div class="canvas-box">
+                            <img id="imgProb" class="display-image" alt="Probability Heatmap">
+                        </div>
+                    </div>
+
+                    <!-- Tab 4: JSON -->
+                    <div class="tab-pane" id="tab-json">
+                        <div class="code-box">
+                            <pre><code id="jsonOutput">// Iceberg state objects will appear here following inference</code></pre>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Iceberg Catalog Table -->
+                <section class="panel">
+                    <div class="table-top">
+                        <h2 class="panel-heading">Extracted Iceberg Objects (<span id="icebergCount">0</span> detected)</h2>
+                        <span class="table-hint">Click any row to inspect complete coordinates and state parameters</span>
+                    </div>
+                    <div class="table-container">
+                        <table class="catalog-table" id="icebergTable">
+                            <thead>
+                                <tr>
+                                    <th>Iceberg ID</th>
+                                    <th>Confidence</th>
+                                    <th>Acquisition Time (UTC)</th>
+                                    <th>Latitude (WGS84)</th>
+                                    <th>Longitude (WGS84)</th>
+                                    <th>Projected X (EPSG:3996)</th>
+                                    <th>Projected Y (EPSG:3996)</th>
+                                    <th>Area (km²)</th>
+                                    <th>Area (m²)</th>
+                                    <th>Dimensions (L × W)</th>
+                                    <th>Orientation</th>
+                                </tr>
+                            </thead>
+                            <tbody id="icebergTableBody">
+                                <tr>
+                                    <td colspan="11" class="table-empty">No icebergs extracted yet. Run segmentation to view catalog.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

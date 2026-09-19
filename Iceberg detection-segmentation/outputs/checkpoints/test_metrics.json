@@ -1,0 +1,16 @@
+{
+  "iceberg_iou": 0.4034,
+  "mean_iou": 0.6952,
+  "dice_f1": 0.5749,
+  "precision": 0.6086,
+  "recall": 0.5448,
+  "pixel_accuracy": 0.9877,
+  "tp": 19059,
+  "fp": 12255,
+  "fn": 15926,
+  "tn": 2246520,
+  "avg_inference_latency_ms": 32.4,
+  "total_parameters": 3714658,
+  "trainable_parameters": 3714658,
+  "total_evaluated_samples": 35
+}
