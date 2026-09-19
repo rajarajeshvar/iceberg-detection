@@ -1,0 +1,147 @@
+# ==============================================================================
+# Git Ignore Rules: Sentinel-1 SAR Iceberg Detection & Segmentation Pipeline
+# ==============================================================================
+
+# --- Python Environments & Bytecode ---
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+pip-log.txt
+pip-delete-this-directory.txt
+
+# --- Virtual Environments ---
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+conda-env/
+
+# --- Environment Variables & Secrets ---
+.env
+.env.*
+*.env
+*.pem
+*.key
+*.cert
+*.crt
+secrets.json
+credentials.json
+token.json
+
+# --- Geospatial Imagery & Large Datasets ---
+*.tif
+*.tiff
+*.TIF
+*.TIFF
+*.jp2
+*.nc
+*.h5
+*.hdf5
+*.geotiff
+
+# Raw & Processed Data Folders
+S1UnetPlusPlus/imgs/
+S1UnetPlusPlus/masks/
+S1UnetPlusPlus/train_validate_test/*.pkl
+**/S1UnetPlusPlus/imgs/
+**/S1UnetPlusPlus/masks/
+**/S1UnetPlusPlus/train_validate_test/*.pkl
+data/raw/
+data/processed/
+**/data/raw/
+**/data/processed/
+
+# Binary array storage
+*.npz
+*.npy
+*.pkl
+*.pickle
+
+# Keep structure with .gitkeep if present
+!**/data/.gitkeep
+!**/S1UnetPlusPlus/.gitkeep
+
+# --- Deep Learning Model Checkpoints & Weights ---
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.safetensors
+*.bin
+*.joblib
+
+# --- Pipeline Run Outputs & Temporary Files ---
+outputs/temp/
+outputs/predictions/
+outputs/overlays/
+outputs/iceberg_states/
+outputs/error_analysis/
+outputs/experiments/
+**/outputs/temp/
+**/outputs/predictions/
+**/outputs/overlays/
+**/outputs/iceberg_states/
+**/outputs/error_analysis/
+**/outputs/experiments/
+
+# --- Logs & Profiling ---
+*.log
+logs/
+**/logs/
+wandb/
+runs/
+lightning_logs/
+
+# --- Testing & Code Quality ---
+.pytest_cache/
+**/.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+
+# --- IDEs & OS Specific Files ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# --- Frontend & Node Dependencies ---
+node_modules/
+**/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm/

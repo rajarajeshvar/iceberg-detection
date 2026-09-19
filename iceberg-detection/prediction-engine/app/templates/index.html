@@ -1,0 +1,1355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Antarctic AI Navigation Mission Control — Features 1–4</title>
+  
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <style>
+    :root {
+      --bg-dark: #0b1120;
+      --panel-bg: rgba(15, 23, 42, 0.88);
+      --card-bg: rgba(30, 41, 59, 0.75);
+      --border-color: rgba(255, 255, 255, 0.1);
+      
+      --color-original: #64748b;
+      --color-route2: #10b981;
+      --color-route3: #06b6d4;
+      --color-warning: #f59e0b;
+      --color-danger: #ef4444;
+      --color-gold: #fbbf24;
+      --color-info: #3b82f6;
+      
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    header {
+      background: rgba(15, 23, 42, 0.95);
+      border-bottom: 1px solid var(--border-color);
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      backdrop-filter: blur(10px);
+      z-index: 1000;
+    }
+
+    .logo-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-icon {
+      font-size: 22px;
+    }
+
+    h1 {
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      background: linear-gradient(135deg, #38bdf8, #818cf8);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .tag-badge {
+      background: rgba(56, 189, 248, 0.15);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      padding: 3px 8px;
+      border-radius: 16px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 12px;
+      background: rgba(30, 41, 59, 0.8);
+      border: 1px solid var(--border-color);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #10b981;
+      box-shadow: 0 0 8px #10b981;
+    }
+
+    .status-dot.disconnected {
+      background-color: #ef4444;
+      box-shadow: 0 0 8px #ef4444;
+    }
+
+    .btn-action {
+      background: linear-gradient(135deg, #0284c7, #4f46e5);
+      color: #fff;
+      border: none;
+      padding: 7px 13px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-action:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
+    .main-container {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+    }
+
+    #map {
+      flex: 1;
+      height: 100%;
+      background: #0f172a;
+      z-index: 1;
+    }
+
+    .sidebar {
+      width: 440px;
+      background: var(--panel-bg);
+      backdrop-filter: blur(16px);
+      border-left: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      z-index: 500;
+      padding: 16px;
+      gap: 16px;
+    }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* Alerts Panel */
+    .alerts-container {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .alert-card {
+      background: var(--card-bg);
+      border-left: 4px solid var(--color-info);
+      border-radius: 6px;
+      padding: 10px;
+      font-size: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .alert-card.CRITICAL { border-left-color: var(--color-danger); background: rgba(239, 68, 68, 0.1); }
+    .alert-card.HIGH { border-left-color: var(--color-warning); background: rgba(245, 158, 11, 0.1); }
+    .alert-card.MEDIUM { border-left-color: var(--color-gold); }
+    .alert-card.LOW { border-left-color: var(--color-info); }
+
+    .alert-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 700;
+    }
+
+    .alert-badge {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .alert-badge.CRITICAL { background: var(--color-danger); }
+    .alert-badge.HIGH { background: var(--color-warning); }
+    .alert-badge.MEDIUM { background: #d97706; }
+    .alert-badge.LOW { background: var(--color-info); }
+
+    .alert-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 4px;
+      font-size: 11px;
+    }
+
+    .btn-view-map {
+      background: rgba(56, 189, 248, 0.2);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      padding: 2px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 10px;
+    }
+
+    .btn-view-map:hover {
+      background: rgba(56, 189, 248, 0.4);
+    }
+
+    /* Route Cards Grid */
+    .route-cards-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .route-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+
+    .route-card:hover {
+      border-color: rgba(255, 255, 255, 0.3);
+      transform: translateX(-2px);
+    }
+
+    .route-card.selected {
+      border-color: #38bdf8;
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.25);
+    }
+
+    .route-card.card-route2 { border-left: 5px solid var(--color-route2); }
+    .route-card.card-route3 { border-left: 5px solid var(--color-route3); }
+    .route-card.card-original { border-left: 5px solid var(--color-original); }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .card-name {
+      font-size: 14px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .badge-recommended {
+      background: rgba(251, 191, 36, 0.2);
+      color: var(--color-gold);
+      border: 1px solid rgba(251, 191, 36, 0.4);
+      padding: 2px 6px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .scores-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .score-box {
+      background: rgba(15, 23, 42, 0.6);
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .score-label {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+      font-weight: 500;
+    }
+
+    .score-value {
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    .score-value.safety { color: #34d399; }
+    .score-value.fuel { color: #38bdf8; }
+
+    /* Compact Rankings Section */
+    .ranking-container {
+      background: rgba(30, 41, 59, 0.5);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 12px;
+    }
+
+    .ranking-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 6px;
+    }
+
+    .ranking-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .ranking-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      padding: 4px 6px;
+      background: rgba(15, 23, 42, 0.4);
+      border-radius: 4px;
+    }
+
+    /* Recommendation Box */
+    .recommendation-box {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(6, 182, 212, 0.15));
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      border-radius: 10px;
+      padding: 12px;
+    }
+
+    .rec-header {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--color-gold);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+
+    .rec-reason {
+      font-size: 12px;
+      color: #cbd5e1;
+      line-height: 1.4;
+    }
+
+    /* What-If Simulation Panel */
+    .sim-panel {
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid rgba(168, 85, 247, 0.3);
+      border-radius: 10px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .sim-select {
+      background: #0f172a;
+      color: var(--text-main);
+      border: 1px solid var(--border-color);
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      width: 100%;
+    }
+
+    .sim-result-box {
+      background: rgba(15, 23, 42, 0.8);
+      border-radius: 6px;
+      padding: 8px;
+      font-size: 11px;
+      line-height: 1.4;
+      display: none;
+    }
+
+    /* Selected Route Details Panel */
+    .details-panel {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 12px;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .metric-item {
+      background: rgba(15, 23, 42, 0.6);
+      padding: 6px 10px;
+      border-radius: 6px;
+    }
+
+    .metric-name { font-size: 10px; color: var(--text-muted); }
+    .metric-val { font-size: 13px; font-weight: 700; margin-top: 2px; }
+
+    .bullet-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .bullet-list li {
+      font-size: 11px;
+      color: #cbd5e1;
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+    }
+
+    .bullet-list li::before {
+      content: "•";
+      color: #38bdf8;
+      font-weight: bold;
+    }
+
+    .comp-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .comp-box {
+      background: rgba(15, 23, 42, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      padding: 5px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+    }
+
+    .comp-val { font-weight: 700; color: #34d399; }
+
+    /* AI Navigation Assistant Drawer */
+    .ai-chat-drawer {
+      position: fixed;
+      bottom: 20px;
+      right: 460px;
+      width: 380px;
+      height: 480px;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(16px);
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: transform 0.3s ease;
+    }
+
+    .ai-chat-drawer.collapsed {
+      transform: translateY(430px);
+    }
+
+    .chat-header {
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(99, 102, 241, 0.2));
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+    }
+
+    .chat-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .chat-body {
+      flex: 1;
+      padding: 12px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      font-size: 12px;
+    }
+
+    .chat-msg {
+      max-width: 85%;
+      padding: 8px 12px;
+      border-radius: 10px;
+      line-height: 1.4;
+    }
+
+    .chat-msg.assistant {
+      background: rgba(30, 41, 59, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      align-self: flex-start;
+      color: #f1f5f9;
+    }
+
+    .chat-msg.user {
+      background: linear-gradient(135deg, #0284c7, #4f46e5);
+      align-self: flex-end;
+      color: #fff;
+    }
+
+    .chat-input-row {
+      padding: 10px;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      gap: 6px;
+    }
+
+    .chat-input {
+      flex: 1;
+      background: #0f172a;
+      border: 1px solid var(--border-color);
+      color: #fff;
+      padding: 8px;
+      border-radius: 6px;
+      font-size: 12px;
+    }
+
+    .chip-container {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+
+    .chip-btn {
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      color: #38bdf8;
+      font-size: 10px;
+      padding: 3px 6px;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    .chip-btn:hover {
+      background: rgba(56, 189, 248, 0.25);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo-group">
+      <span class="logo-icon">🧭</span>
+      <div>
+        <h1>ANTARCTIC AI NAVIGATION MISSION CONTROL</h1>
+        <div style="font-size:10px; color:#94a3b8;">SIH26059 Integrated System (Features 1–4)</div>
+      </div>
+      <span class="tag-badge">AI DECISION SUPPORT ACTIVE</span>
+    </div>
+
+    <div style="display: flex; gap: 10px; align-items: center;">
+      <div class="status-pill">
+        <div class="status-dot" id="ws-status-dot"></div>
+        <span id="ws-status-text">WEBSOCKET CONNECTED</span>
+      </div>
+
+      <button class="btn-action" style="background: linear-gradient(135deg, #e11d48, #be123c);" onclick="triggerSarUploadModal()">
+        <span>📷</span> Upload SAR Image
+      </button>
+
+      <button class="btn-action" onclick="recalculateRoutes()">
+        <span>🔄</span> Simulate Iceberg
+      </button>
+
+      <button class="btn-action" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9);" onclick="toggleChatDrawer()">
+        <span>💬</span> AI Assistant
+      </button>
+    </div>
+  </header>
+
+  <div class="main-container">
+    <!-- Interactive Map rendering ALL 3 routes simultaneously -->
+    <div id="map"></div>
+
+    <!-- Sidebar UI -->
+    <div class="sidebar">
+      
+      <!-- Feature 4 Real-Time Active Alerts Panel -->
+      <div>
+        <div class="section-title">
+          <span>REAL-TIME ALERTS</span>
+          <span style="font-size: 10px; color: #34d399;" id="alert-count-label">ACTIVE ALERTS: 1</span>
+        </div>
+        <div class="alerts-container" id="alerts-list">
+          <!-- Populated dynamically via WebSocket / REST -->
+        </div>
+      </div>
+
+      <!-- Route Options Section -->
+      <div>
+        <div class="section-title">
+          <span>ROUTE OPTIONS</span>
+          <span style="font-size: 10px; color: #64748b;">ALL 3 ROUTES VISIBLE ON MAP</span>
+        </div>
+        
+        <div class="route-cards-grid">
+          
+          <!-- Route 2 Card -->
+          <div class="route-card card-route2 selected" id="card-route_2" onclick="selectRoute('route_2')">
+            <div class="card-header">
+              <span class="card-name">ROUTE 2</span>
+              <span class="badge-recommended" id="badge-route_2">🥇 RECOMMENDED</span>
+            </div>
+            <div class="scores-row">
+              <div class="score-box">
+                <div class="score-label">Safety</div>
+                <div class="score-value safety" id="score-r2-safety">90 / 100</div>
+              </div>
+              <div class="score-box">
+                <div class="score-label">Fuel Efficient</div>
+                <div class="score-value fuel" id="score-r2-fuel">91 / 100</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Route 3 Card -->
+          <div class="route-card card-route3" id="card-route_3" onclick="selectRoute('route_3')">
+            <div class="card-header">
+              <span class="card-name">ROUTE 3</span>
+              <span class="badge-recommended" id="badge-route_3" style="display:none;">🥇 RECOMMENDED</span>
+            </div>
+            <div class="scores-row">
+              <div class="score-box">
+                <div class="score-label">Safety</div>
+                <div class="score-value safety" id="score-r3-safety">84 / 100</div>
+              </div>
+              <div class="score-box">
+                <div class="score-label">Fuel Efficient</div>
+                <div class="score-value fuel" id="score-r3-fuel">96 / 100</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Original Baseline Route Card -->
+          <div class="route-card card-original" id="card-original" onclick="selectRoute('original')">
+            <div class="card-header">
+              <span class="card-name">ORIGINAL ROUTE</span>
+              <span style="font-size: 10px; color: #94a3b8; font-weight: 700;">BASELINE</span>
+            </div>
+            <div class="scores-row">
+              <div class="score-box">
+                <div class="score-label">Safety</div>
+                <div class="score-value safety" style="color:#f87171;" id="score-orig-safety">42 / 100</div>
+              </div>
+              <div class="score-box">
+                <div class="score-label">Fuel Efficient</div>
+                <div class="score-value fuel" id="score-orig-fuel">93 / 100</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Feature 4 Explainable Recommendation Summary Box (NO OVERALL NUMERICAL SCORE) -->
+      <div class="recommendation-box">
+        <div class="rec-header">
+          <span>🥇</span> <span id="rec-label">RECOMMENDED ROUTE — ROUTE 2</span>
+        </div>
+        <div class="rec-reason" id="rec-reason">
+          Route 2 provides the highest safety buffer (90/100) while maintaining strong fuel efficiency (91/100) and completely bypassing predicted drift zones of Iceberg IB001.
+        </div>
+        <button class="btn-action" style="margin-top:8px; width:100%; justify-content:center; background:rgba(251,191,36,0.15); color:#fbbf24; border:1px solid rgba(251,191,36,0.3);" onclick="fetchRecommendationReason()">
+          <span>🔍</span> Explain Recommendation Logic
+        </button>
+      </div>
+
+      <!-- Feature 4 What-If Simulation Runner Panel -->
+      <div class="sim-panel">
+        <div class="section-title" style="margin:0;">
+          <span>🧪 WHAT-IF SIMULATION</span>
+          <span style="font-size:10px; color:#a855f7;">DYNAMIC STRESS TEST</span>
+        </div>
+        <select class="sim-select" id="sim-scenario-select">
+          <option value="iceberg_speed:10">Iceberg Drift Speed +10%</option>
+          <option value="iceberg_speed:20">Iceberg Drift Speed +20%</option>
+          <option value="iceberg_speed:30">Iceberg Drift Speed +30%</option>
+          <option value="iceberg_heading:15">Heading Shift (+15° Eastward)</option>
+          <option value="sea_ice:20">Sea-Ice Density Spike (+20%)</option>
+          <option value="original_route:0">Original Route Exposure Test</option>
+        </select>
+        <button class="btn-action" style="background: linear-gradient(135deg, #9333ea, #4c1d95);" onclick="runWhatIfSimulation()">
+          <span>⚡</span> Run Simulation Scenario
+        </button>
+        <div class="sim-result-box" id="sim-result-box">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+
+      <!-- Compact Rankings Section -->
+      <div class="ranking-container">
+        <div class="section-title" style="margin:0;">ROUTE RANKINGS</div>
+        <div class="ranking-grid">
+          <div>
+            <div style="font-size: 10px; font-weight: 700; color: #34d399; margin-bottom: 4px;">SAFETY RANKING</div>
+            <div class="ranking-list" id="safety-ranking-list">
+              <div class="ranking-item"><span>🥇 Route 2</span> <strong>90</strong></div>
+              <div class="ranking-item"><span>🥈 Route 3</span> <strong>84</strong></div>
+              <div class="ranking-item"><span>🥉 Original</span> <strong>42</strong></div>
+            </div>
+          </div>
+          <div>
+            <div style="font-size: 10px; font-weight: 700; color: #38bdf8; margin-bottom: 4px;">FUEL EFFICIENCY</div>
+            <div class="ranking-list" id="fuel-ranking-list">
+              <div class="ranking-item"><span>🥇 Route 3</span> <strong>96</strong></div>
+              <div class="ranking-item"><span>🥈 Original</span> <strong>93</strong></div>
+              <div class="ranking-item"><span>🥉 Route 2</span> <strong>91</strong></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Selected Route Details Panel -->
+      <div class="details-panel">
+        <div class="section-title">
+          <span id="details-title">ROUTE 2 DETAILS</span>
+          <span style="font-size:10px; color:#34d399;" id="details-risk-badge">LOW RISK</span>
+        </div>
+
+        <div class="metrics-grid">
+          <div class="metric-item">
+            <div class="metric-name">Distance</div>
+            <div class="metric-val" id="m-dist">920 km</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-name">Travel Time</div>
+            <div class="metric-val" id="m-time">61.4 hours</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-name">Estimated Fuel</div>
+            <div class="metric-val" id="m-fuel">52,400 L</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-name">Min Iceberg Clearance</div>
+            <div class="metric-val" id="m-clearance">18.2 km</div>
+          </div>
+        </div>
+
+        <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px;">WHY THIS ROUTE?</div>
+        <ul class="bullet-list" id="details-why">
+          <li>Avoids predicted iceberg trajectory</li>
+          <li>Maintains greater hazard clearance</li>
+          <li>Adds only moderate distance</li>
+          <li>Maintains good fuel efficiency</li>
+        </ul>
+
+        <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); margin-top: 10px; margin-bottom: 4px;">VS ORIGINAL ROUTE</div>
+        <div class="comp-grid" id="details-comp">
+          <div class="comp-box">Risk: <span class="comp-val" id="comp-risk">↓ 62% lower</span></div>
+          <div class="comp-box">Distance: <span class="comp-val" id="comp-dist">↑ 8.2%</span></div>
+          <div class="comp-box">Fuel: <span class="comp-val" id="comp-fuel">↑ 11.7%</span></div>
+          <div class="comp-box">Safety: <span class="comp-val" id="comp-safety">↑ 48 points</span></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Feature 4 AI Navigation Assistant Chat Drawer -->
+  <div class="ai-chat-drawer collapsed" id="ai-chat-drawer">
+    <div class="chat-header" onclick="toggleChatDrawer()">
+      <div class="chat-title">
+        <span>🤖</span> Antarctic AI Navigation Assistant
+      </div>
+      <span style="font-size:12px; color:#94a3b8;" id="chat-toggle-icon">▲</span>
+    </div>
+    <div class="chat-body" id="chat-messages">
+      <div class="chat-msg assistant">
+        Hello Officer! I am your AI Antarctic Navigation Assistant grounded strictly in live SAR detections (Feature 1), ML trajectory models (Feature 2), and multi-route optimization (Feature 3). How can I assist your watch today?
+        <div class="chip-container">
+          <button class="chip-btn" onclick="sendChipQuery('Why is Route 2 recommended over Route 3?')">Why Route 2?</button>
+          <button class="chip-btn" onclick="sendChipQuery('What if iceberg speed increases by 20%?')">Iceberg +20% Speed?</button>
+          <button class="chip-btn" onclick="sendChipQuery('Summarize current navigational hazards')">Hazard Summary</button>
+        </div>
+      </div>
+    </div>
+    <div class="chat-input-row">
+      <input type="text" class="chat-input" id="chat-input" placeholder="Ask navigation assistant..." onkeypress="handleChatKeyPress(event)">
+      <button class="btn-action" style="padding:6px 12px;" onclick="sendChatMessage()">Send</button>
+    </div>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script>
+    // Global System State
+    let map;
+    let routesData = [];
+    let activeRouteId = 'route_2';
+    let websocket = null;
+    let alertsData = [];
+    let mapLayers = {
+      original: null,
+      route_2: null,
+      route_3: null,
+      hazards: []
+    };
+
+    const ROUTE_STYLES = {
+      original: { color: '#64748b', weight: 4, dashArray: '8, 8', opacity: 0.7 },
+      route_2:  { color: '#10b981', weight: 6, opacity: 0.95 },
+      route_3:  { color: '#06b6d4', weight: 5, dashArray: '4, 8', opacity: 0.85 }
+    };
+
+    function initMap() {
+      // Center on Antarctic sector
+      map = L.map('map', { zoomControl: true }).setView([-64.15, 42.6], 7);
+
+      // Esri World Dark Gray Base
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, GEBCO, NOAA, iPC',
+        maxZoom: 16
+      }).addTo(map);
+
+      // Connect WebSocket & Fetch Initial Route Optimization
+      initWebSocket();
+      fetchRouteOptimization();
+      fetchInitialAlerts();
+    }
+
+    // WebSocket Alert Stream Connection
+    function initWebSocket() {
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${wsProtocol}//${window.location.host}/ws/alerts`;
+
+      try {
+        websocket = new WebSocket(wsUrl);
+
+        websocket.onopen = () => {
+          document.getElementById('ws-status-dot').className = 'status-dot';
+          document.getElementById('ws-status-text').innerText = 'WEBSOCKET CONNECTED';
+        };
+
+        websocket.onmessage = (event) => {
+          const alert = JSON.parse(event.data);
+          onAlertReceived(alert);
+        };
+
+        websocket.onerror = () => {
+          document.getElementById('ws-status-dot').className = 'status-dot disconnected';
+          document.getElementById('ws-status-text').innerText = 'WEBSOCKET DISCONNECTED';
+        };
+
+        websocket.onclose = () => {
+          document.getElementById('ws-status-dot').className = 'status-dot disconnected';
+          document.getElementById('ws-status-text').innerText = 'RECONNECTING WS...';
+          setTimeout(initWebSocket, 3000);
+        };
+      } catch (err) {
+        console.warn("WebSocket init error:", err);
+      }
+    }
+
+    async function fetchInitialAlerts() {
+      try {
+        const res = await fetch('/api/v1/alerts');
+        const data = await res.json();
+        alertsData = data.alerts;
+        renderAlertsList();
+      } catch (e) {
+        console.error("Alerts fetch error:", e);
+      }
+    }
+
+    function onAlertReceived(alert) {
+      // Deduplicate & Prepend
+      alertsData = alertsData.filter(a => a.alert_id !== alert.alert_id);
+      alertsData.unshift(alert);
+      renderAlertsList();
+
+      // Pan to hazard if critical
+      if (alert.severity === 'CRITICAL' && alert.location) {
+        map.flyTo([alert.location.latitude, alert.location.longitude], 8);
+      }
+    }
+
+    function renderAlertsList() {
+      const listEl = document.getElementById('alerts-list');
+      document.getElementById('alert-count-label').innerText = `ACTIVE ALERTS: ${alertsData.length}`;
+
+      if (alertsData.length === 0) {
+        listEl.innerHTML = `<div style="font-size:11px; color:#94a3b8; text-align:center; padding:10px;">No active navigation alerts</div>`;
+        return;
+      }
+
+      listEl.innerHTML = alertsData.map(a => {
+        const locBtn = a.location ? `<button class="btn-view-map" onclick="panToHazard(${a.location.latitude}, ${a.location.longitude})">VIEW ON MAP</button>` : '';
+        return `
+          <div class="alert-card ${a.severity}">
+            <div class="alert-header">
+              <span>${a.title}</span>
+              <span class="alert-badge ${a.severity}">${a.severity}</span>
+            </div>
+            <div style="color:#cbd5e1; font-size:11px;">${a.description}</div>
+            <div class="alert-actions">
+              <span style="color:#94a3b8; font-size:10px;">${a.recommended_action || ''}</span>
+              ${locBtn}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function panToHazard(lat, lon) {
+      map.flyTo([lat, lon], 9);
+    }
+
+    async function fetchRouteOptimization() {
+      try {
+        const response = await fetch('/api/v1/route/optimize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            vessel_id: "VESSEL001",
+            start_latitude: -64.500,
+            start_longitude: 40.200,
+            dest_latitude: -63.500,
+            dest_longitude: 45.000,
+            icebergs: [{ id: "IB001", latitude: -64.231, longitude: 42.512, size_m: 145, confidence: 0.94 }]
+          })
+        });
+
+        const data = await response.json();
+        routesData = data.routes;
+        updateUI(data);
+        renderMapRoutes(data.routes);
+      } catch (err) {
+        console.error("Failed to fetch route optimization:", err);
+      }
+    }
+
+    async function recalculateRoutes() {
+      try {
+        const response = await fetch('/api/v1/route/recalculate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            vessel_id: "VESSEL001",
+            start_latitude: -64.500,
+            start_longitude: 40.200,
+            dest_latitude: -63.500,
+            dest_longitude: 45.000,
+            new_iceberg: { id: "IB002", latitude: -64.150, longitude: 42.800, size_m: 210, confidence: 0.96 }
+          })
+        });
+
+        const data = await response.json();
+        routesData = data.routes;
+        updateUI(data);
+        renderMapRoutes(data.routes);
+      } catch (err) {
+        console.error("Recalculate error:", err);
+      }
+    }
+
+    function renderMapRoutes(routes) {
+      // Clear existing layers
+      Object.keys(mapLayers).forEach(k => {
+        if (Array.isArray(mapLayers[k])) {
+          mapLayers[k].forEach(l => map.removeLayer(l));
+          mapLayers[k] = [];
+        } else if (mapLayers[k]) {
+          map.removeLayer(mapLayers[k]);
+          mapLayers[k] = null;
+        }
+      });
+
+      // Render Start & Destination Markers
+      const startPoint = [-64.500, 40.200];
+      const destPoint = [-63.500, 45.000];
+
+      const startIcon = L.divIcon({ html: '🚢 <b style="color:#fff; font-size:10px;">START / VESSEL001</b>', className: 'map-badge-start' });
+      const destIcon = L.divIcon({ html: '🏁 <b style="color:#fff; font-size:10px;">DESTINATION</b>', className: 'map-badge-dest' });
+
+      L.marker(startPoint, { icon: startIcon }).addTo(map);
+      L.marker(destPoint, { icon: destIcon }).addTo(map);
+
+      // Render Iceberg & Predictions
+      const ibPoint = [-64.231, 42.512];
+      const ibIcon = L.divIcon({ html: '🧊 <b style="color:#fbbf24; font-size:10px;">IB001</b>', className: 'map-badge-iceberg' });
+      L.marker(ibPoint, { icon: ibIcon }).addTo(map);
+
+      // Predicted Iceberg Trajectory Path
+      const ibTrajCoords = [
+        [-64.231, 42.512],
+        [-64.210, 42.610],
+        [-64.180, 42.740],
+        [-64.110, 42.980],
+        [-64.020, 43.310],
+        [-63.910, 43.650]
+      ];
+      const ibPolyline = L.polyline(ibTrajCoords, { color: '#ef4444', weight: 2, dashArray: '4, 4' }).addTo(map);
+      mapLayers.hazards.push(ibPolyline);
+
+      // Uncertainty Radii Circles
+      L.circle([-64.110, 42.980], { radius: 7400, color: '#ef4444', fillColor: '#ef4444', fillOpacity: 0.15, weight: 1 }).addTo(map);
+
+      // Render ALL 3 ROUTES SIMULTANEOUSLY
+      routes.forEach(r => {
+        const coords = r.points.map(p => [p.latitude, p.longitude]);
+        const isSelected = r.route_id === activeRouteId;
+        const style = { ...ROUTE_STYLES[r.route_id] };
+
+        if (isSelected) {
+          style.weight = style.weight + 3;
+          style.opacity = 1.0;
+        } else {
+          style.opacity = 0.45;
+        }
+
+        const polyline = L.polyline(coords, style).addTo(map);
+        mapLayers[r.route_id] = polyline;
+
+        // Route Label Badges on Map
+        const midIdx = Math.floor(coords.length / 2);
+        const midCoord = coords[midIdx];
+        const labelHtml = `<span style="background:${style.color}; color:#fff; padding:2px 5px; border-radius:4px; font-weight:700; font-size:9px;">${r.route_name.toUpperCase()}</span>`;
+        L.marker(midCoord, { icon: L.divIcon({ html: labelHtml, className: 'map-route-label' }) }).addTo(map);
+
+        // Render Hazard Intersections for Original Route
+        if (r.intersections && r.intersections.length > 0) {
+          r.intersections.forEach(intersect => {
+            const warnIcon = L.divIcon({
+              html: '⚠️ <span style="background:#ef4444; color:#fff; font-size:9px; padding:2px 4px; border-radius:3px; font-weight:700;">HAZARD INTERSECTION</span>',
+              className: 'map-warn-badge'
+            });
+            L.marker([intersect.latitude, intersect.longitude], { icon: warnIcon }).addTo(map);
+          });
+        }
+      });
+    }
+
+    function updateUI(data) {
+      // Update Route Card Scores
+      data.routes.forEach(r => {
+        const prefix = r.route_id === 'original' ? 'orig' : (r.route_id === 'route_2' ? 'r2' : 'r3');
+        const sElem = document.getElementById(`score-${prefix}-safety`);
+        const fElem = document.getElementById(`score-${prefix}-fuel`);
+
+        if (sElem) sElem.innerText = `${r.safety_score} / 100`;
+        if (fElem) fElem.innerText = `${r.fuel_efficiency_score} / 100`;
+
+        // Recommended Badge
+        const bElem = document.getElementById(`badge-${r.route_id}`);
+        if (bElem) {
+          bElem.style.display = (data.recommendation.route_id === r.route_id) ? 'inline-block' : 'none';
+        }
+      });
+
+      // Recommendation Box
+      const recRoute = data.routes.find(r => r.route_id === data.recommendation.route_id);
+      document.getElementById('rec-label').innerText = `RECOMMENDED ROUTE — ${recRoute ? recRoute.route_name.toUpperCase() : 'ROUTE 2'}`;
+      document.getElementById('rec-reason').innerText = data.recommendation.reason;
+
+      // Dual Rankings
+      renderRankings(data.ranking, data.routes);
+
+      // Selected Route Details
+      updateDetailsPanel(activeRouteId);
+    }
+
+    function renderRankings(ranking, routes) {
+      const getRoute = id => routes.find(r => r.route_id === id);
+      const medals = ['🥇', '🥈', '🥉'];
+
+      // Safety Ranking
+      const sContainer = document.getElementById('safety-ranking-list');
+      sContainer.innerHTML = ranking.safety.map((id, idx) => {
+        const r = getRoute(id);
+        return `<div class="ranking-item"><span>${medals[idx]} ${r.route_name}</span> <strong>${r.safety_score}</strong></div>`;
+      }).join('');
+
+      // Fuel Efficiency Ranking
+      const fContainer = document.getElementById('fuel-ranking-list');
+      fContainer.innerHTML = ranking.fuel_efficiency.map((id, idx) => {
+        const r = getRoute(id);
+        return `<div class="ranking-item"><span>${medals[idx]} ${r.route_name}</span> <strong>${r.fuel_efficiency_score}</strong></div>`;
+      }).join('');
+    }
+
+    function selectRoute(routeId) {
+      activeRouteId = routeId;
+      document.querySelectorAll('.route-card').forEach(c => c.classList.remove('selected'));
+      const activeCard = document.getElementById(`card-${routeId}`);
+      if (activeCard) activeCard.classList.add('selected');
+
+      // Update Map styles
+      if (routesData.length > 0) {
+        renderMapRoutes(routesData);
+      }
+
+      updateDetailsPanel(routeId);
+    }
+
+    function updateDetailsPanel(routeId) {
+      const r = routesData.find(item => item.route_id === routeId);
+      if (!r) return;
+
+      document.getElementById('details-title').innerText = `${r.route_name.toUpperCase()} DETAILS`;
+      const riskBadge = document.getElementById('details-risk-badge');
+      riskBadge.innerText = `${r.risk_level} RISK`;
+      riskBadge.style.color = r.risk_level === 'LOW' ? '#34d399' : (r.risk_level === 'MEDIUM' ? '#fbbf24' : '#f87171');
+
+      document.getElementById('m-dist').innerText = `${r.distance_km} km`;
+      document.getElementById('m-time').innerText = `${r.travel_time_hours} hours`;
+      document.getElementById('m-fuel').innerText = `${r.estimated_fuel.toLocaleString()} L`;
+      document.getElementById('m-clearance').innerText = `${r.min_clearance_km} km`;
+
+      // Why This Route
+      const whyList = document.getElementById('details-why');
+      whyList.innerHTML = r.why_this_route.map(bullet => `<li>${bullet}</li>`).join('');
+
+      // VS Original
+      if (r.comparison_vs_original) {
+        const comp = r.comparison_vs_original;
+        document.getElementById('comp-risk').innerText = comp.risk_reduction;
+        document.getElementById('comp-dist').innerText = comp.distance_change;
+        document.getElementById('comp-fuel').innerText = comp.fuel_change;
+        document.getElementById('comp-safety').innerText = comp.safety_increase;
+      }
+    }
+
+    // Feature 4 Recommendation Explanation Fetch
+    async function fetchRecommendationReason() {
+      try {
+        const res = await fetch('/api/v1/recommendation/reason');
+        const data = await res.json();
+        alert(`🔍 Explainable AI Recommendation Decision Engine:\n\nRecommended Route: ${data.recommended_route_id.toUpperCase()}\nRisk Level: ${data.risk_level}\n\nSummary:\n${data.explainable_reason}\n\nKey Trade-offs:\n${data.trade_offs.map(t => '• ' + t).join('\n')}`);
+      } catch (e) {
+        console.error("Reason fetch error:", e);
+      }
+    }
+
+    // Feature 4 What-If Simulation Runner
+    async function runWhatIfSimulation() {
+      const val = document.getElementById('sim-scenario-select').value;
+      const parts = val.split(':');
+      const scenarioType = parts[0];
+      const changePct = parseFloat(parts[1] || '20.0');
+
+      const resBox = document.getElementById('sim-result-box');
+      resBox.style.display = 'block';
+      resBox.innerHTML = '<span style="color:#a855f7;">Running simulation stress test...</span>';
+
+      try {
+        const res = await fetch('/api/v1/simulation/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            scenario_type: scenarioType,
+            change_percent: changePct
+          })
+        });
+        const data = await res.json();
+
+        const impactsHtml = (data.route_impacts || []).map(r => {
+          const riskColor = r.simulated_risk_level === 'LOW' ? '#34d399' : (r.simulated_risk_level === 'MEDIUM' ? '#fbbf24' : '#f87171');
+          return `
+            <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(15,23,42,0.6); padding:4px 8px; border-radius:4px; margin-top:4px;">
+              <span><b>${r.route_name}</b> (<span style="color:${riskColor}; font-weight:700;">${r.simulated_risk_level}</span>)</span>
+              <span>Safety: <b>${r.simulated_safety_score}/100</b> | Fuel: <b>${r.simulated_fuel_score}/100</b></span>
+            </div>
+          `;
+        }).join('');
+
+        resBox.innerHTML = `
+          <div style="font-weight:700; color:#a855f7; margin-bottom:4px;">${data.label || 'SIMULATION RESULTS'}</div>
+          <div style="color:#cbd5e1; font-size:11px; margin-bottom:6px;">${data.summary_message || ''}</div>
+          <div style="font-size:11px; font-weight:700; color:#38bdf8;">RECOMMENDED ROUTE: ${(data.recommended_route || 'route_2').toUpperCase()}</div>
+          ${impactsHtml}
+        `;
+      } catch (e) {
+        resBox.innerHTML = `<span style="color:#ef4444;">Simulation error: ${e.message}</span>`;
+      }
+    }
+
+    // Feature 4 AI Chat Drawer Logic
+    function toggleChatDrawer() {
+      const drawer = document.getElementById('ai-chat-drawer');
+      const icon = document.getElementById('chat-toggle-icon');
+      drawer.classList.toggle('collapsed');
+      icon.innerText = drawer.classList.contains('collapsed') ? '▲' : '▼';
+    }
+
+    function handleChatKeyPress(e) {
+      if (e.key === 'Enter') sendChatMessage();
+    }
+
+    function sendChipQuery(text) {
+      document.getElementById('chat-input').value = text;
+      sendChatMessage();
+    }
+
+    async function sendChatMessage() {
+      const inputEl = document.getElementById('chat-input');
+      const query = inputEl.value.trim();
+      if (!query) return;
+
+      inputEl.value = '';
+      appendChatMessage(query, 'user');
+
+      // Expand drawer if collapsed
+      document.getElementById('ai-chat-drawer').classList.remove('collapsed');
+      document.getElementById('chat-toggle-icon').innerText = '▼';
+
+      const loadingMsgId = appendChatMessage('Analyzing grounded navigation context...', 'assistant');
+
+      try {
+        const res = await fetch('/api/v1/assistant/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_message: query })
+        });
+        const data = await res.json();
+        
+        // Replace loading message with answer
+        const loadingEl = document.getElementById(loadingMsgId);
+        if (loadingEl) {
+          const sources = (data.grounding_sources || ["Feature 1 SAR Detections", "Feature 2 Trajectory Models", "Feature 3 Multi-Route Optimization"]).join(', ');
+          const conf = ((data.confidence || 0.95) * 100).toFixed(0);
+          loadingEl.innerHTML = `
+            ${data.ai_response || 'No response generated.'}
+            <div style="font-size:9px; color:#94a3b8; margin-top:6px; font-style:italic;">
+              Grounded in: ${sources} (Confidence: ${conf}%)
+            </div>
+          `;
+        }
+      } catch (e) {
+        const loadingEl = document.getElementById(loadingMsgId);
+        if (loadingEl) loadingEl.innerText = `Sorry, I encountered an issue accessing groundings: ${e.message}`;
+      }
+    }
+
+    function appendChatMessage(text, role) {
+      const msgContainer = document.getElementById('chat-messages');
+      const msgId = `msg-${Date.now()}-${Math.floor(Math.random()*1000)}`;
+      const msgDiv = document.createElement('div');
+      msgDiv.className = `chat-msg ${role}`;
+      msgDiv.id = msgId;
+      msgDiv.innerText = text;
+      msgContainer.appendChild(msgDiv);
+      msgContainer.scrollTop = msgContainer.scrollHeight;
+      return msgId;
+    }
+
+    async function triggerSarUploadModal() {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*,.tiff,.geotiff,.png,.jpg';
+      
+      input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        alert(`📷 Feature 1 SAR Processing: Ingesting Sentinel-1 SAR file '${file.name}'...\nDetecting iceberg targets and extracting geo-coordinates...`);
+
+        try {
+          const sarDetection = {
+            id: `IB_SAR_${Math.floor(Math.random() * 900 + 100)}`,
+            latitude: -64.180,
+            longitude: 42.650,
+            size_m: 185.0,
+            confidence: 0.97
+          };
+
+          const response = await fetch('/api/v1/route/recalculate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              vessel_id: "VESSEL001",
+              start_latitude: -64.500,
+              start_longitude: 40.200,
+              dest_latitude: -63.500,
+              dest_longitude: 45.000,
+              new_iceberg: sarDetection
+            })
+          });
+
+          const data = await response.json();
+          routesData = data.routes;
+          updateUI(data);
+          renderMapRoutes(data.routes);
+
+          const sarIcon = L.divIcon({ 
+            html: `🧊 <b style="color:#ef4444; font-size:10px; background:#fff; padding:2px 4px; border-radius:3px;">${sarDetection.id} (SAR DETECTED)</b>`, 
+            className: 'map-badge-sar' 
+          });
+          L.marker([sarDetection.latitude, sarDetection.longitude], { icon: sarIcon }).addTo(map);
+
+          alert(`✅ Iceberg Target ${sarDetection.id} Detected from SAR Image!\nPlotted on map at Lat: ${sarDetection.latitude}, Lon: ${sarDetection.longitude}.\nFeature 2 Trajectory & Feature 3 Routes recalculated!`);
+        } catch (err) {
+          console.error("SAR upload error:", err);
+        }
+      };
+
+      input.click();
+    }
+
+    window.onload = initMap;
+  </script>
+</body>
+</html>

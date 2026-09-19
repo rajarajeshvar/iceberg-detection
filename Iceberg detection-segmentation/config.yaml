@@ -1,0 +1,49 @@
+# Central Configuration for Sentinel-1 SAR Iceberg Segmentation Pipeline
+
+data:
+  raw_dir: "S1UnetPlusPlus"
+  imgs_dir: "S1UnetPlusPlus/imgs"
+  masks_dir: "S1UnetPlusPlus/masks"
+  pkl_dir: "S1UnetPlusPlus/train_validate_test"
+  processed_dir: "data/processed"
+  image_size: [256, 256]
+  in_channels: 3
+  num_classes: 2
+  pixel_resolution_m: 40.0
+  source_crs: "EPSG:3996"
+  target_crs: "EPSG:4326"
+
+model:
+  architecture: "SegFormer-B0"
+  backbone: "nvidia/mit-b0"
+  num_classes: 2
+  pretrained: true
+  drop_rate: 0.1
+
+training:
+  seed: 42
+  batch_size: 16
+  num_workers: 0
+  epochs: 30
+  learning_rate: 0.0003
+  weight_decay: 0.01
+  min_lr: 0.000001
+  warmup_epochs: 3
+  loss:
+    bce_weight: 0.5
+    dice_weight: 0.5
+    class_weights: [1.0, 10.0]
+  checkpoint_dir: "outputs/checkpoints"
+  save_best_metric: "val_dice"
+
+inference:
+  confidence_threshold: 0.5
+  min_iceberg_pixels: 4
+  morphology_kernel_size: 3
+  output_dir: "outputs/predictions"
+  overlay_dir: "outputs/overlays"
+  states_dir: "outputs/iceberg_states"
+
+server:
+  host: "127.0.0.1"
+  port: 8000
